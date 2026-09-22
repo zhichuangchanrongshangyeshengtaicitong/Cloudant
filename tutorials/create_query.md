@@ -1,648 +1,317 @@
 ---
 
 copyright:
-  years: 2017
-lastupdated: "2017-07-03"
+  years: 2017, 2026
+lastupdated: "2026-07-06"
 
+keywords: create index, create query, run query, fields, operators
+
+subcollection: Cloudant
+
+content-type: tutorial
+services: Cloudant
+account-plan: lite 
+completion-time: 10m
 ---
-{:new_window: target="_blank"}
-{:shortdesc: .shortdesc}
-{:screen: .screen}
-{:codeblock: .codeblock}
-{:pre: .pre}
 
-# Creating a Cloudant Query
+{{site.data.keyword.attribute-definition-list}}
 
-This tutorial demonstrates how to create a database, populate it
-with documents, create an index, and use the index to query the database.
+# Using {{site.data.keyword.cloudant_short_notm}} Query
+{: #creating-an-ibm-cloudant-query}
+{: toc-content-type="tutorial"}
+{: toc-services="Cloudant"}
+{: toc-completion-time="10m"}
 
-Exercises for both the ![Command line icon](../images/CommandLineIcon.png) _Command line_
-and ![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_ are provided. The
-Cloudant Dashboard exercises give you a visual example of each task. You can follow the links
-throughout the tutorial for more information.
+In this tutorial, we demonstrate how to create an index and use the index to query the database. You also learn to create different types of queries to more easily find data.
+{: shortdesc}
 
-To begin, you create the `query-demo` database and some documents that
-contain the data for these exercises.
+Here you run the commands from the command line, but you can also complete these tasks with the {{site.data.keyword.cloudantfull}} Dashboard, which gives you a visual example of each task. For more information about the dashboard, see [Using the {{site.data.keyword.cloudant_short_notm}} Dashboard](/docs/Cloudant?topic=Cloudant-navigate-the-dashboard) tutorial.
 
-## Assumptions
+## Before you begin
+{: #before-you-begin-qt}
 
-Before you begin, follow these steps to prepare for the tutorial:
+Before you begin, follow these tutorials to create an instance, and then create and populate a database.
 
-1.  [Create a Bluemix account ![External link icon](../images/launch-glyph.svg "External link icon")](https://console.ng.bluemix.net/registration/){:new_window}.
-2.  Log in to the
-  [Cloudant Dashboard ![External link icon](../images/launch-glyph.svg "External link icon")](https://console.ng.bluemix.net/catalog/services/cloudant-nosql-db){:new_window}.
-3.  [Create a Cloudant instance on Bluemix](create_service.html#creating-a-cloudant-instance-on-bluemix).
-4.  (Optional) [Create an acurl alias](../guides/acurl.html#authorized-curl-acurl-) to make it easier and faster to run commands from the command line.
-5.  Replace the `$ACCOUNT` variable in the commands that are included in the exercises with the user name you use to log in to Cloudant Dashboard.
-  If you decide not to set up `acurl`,
-  use the following URL instead of the one provided in the exercises:
-  ``` sh
-  curl https://$USERNAME:$PASSWORD@$ACCOUNT.cloudant.com/query-demo
-  ```
-  {:codeblock}
+1. [Create an {{site.data.keyword.cloudant_short_notm}} instance](/docs/Cloudant?topic=Cloudant-getting-started-with-cloudant#creating-an-ibm-cloudant-instance-on-ibm-cloud).
+2. [Create a database](/docs/Cloudant?topic=Cloudant-creating-and-populating-a-simple-ibm-cloudant-database-on-ibm-cloud#creating-a-database-within-the-service-instance).
+3. [Populate the database](/docs/services/Cloudant?topic=Cloudant-creating-and-populating-a-simple-ibm-cloudant-database-on-ibm-cloud#storing-a-small-collection-of-data-as-documents-within-the-database).
+4. (Optional) [Create an `acurl` alias](/docs/Cloudant?topic=Cloudant-working-with-curl#encode-user-name-and-password).
 
-## Creating a database
+If you decide not to set up `acurl`, use the following URL with `curl` instead of the one provided in the exercises, `curl "https://$USERNAME:$PASSWORD@$ACCOUNT.cloudant.com/databasedemo"`.
+{: attention}
 
-In this section, you create the `query-demo` [database](../api/database.html#create) that
-is the database that we use in this tutorial.
+The `acurl` alias is more secure. It prevents someone from reading your password over your shoulder as you type. It also makes sure that your password isn’t sent in plain text over the network by enforcing HTTPS.
 
-> **Note:** In this tutorial,
-  we use the `acurl` alias rather than the `curl` command.
-  The `acurl` alias is created using steps described [here](../guides/acurl.html#authorized-curl-acurl-).
-  If you prefer to use the `curl` command,
-  or another method for invoking API endpoints,
-  substitute your command in the tutorial,
-  along with the parameters required by your command,
-  such as username and password.
-
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
-
-1.  Create a database by running this command:
-  ``` sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo -X PUT
-  ```
-  {:codeblock}
-2.  Review the results:
-  ```json
-  {
-    "ok": true
-  }
-  ```
-  {:codeblock}
-
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
-
-1.  Open the Cloudant service instance that you created.
-2.  Select the Databases tab:
-
-  ![Databases tab](../images/tabs.png)
-3.  Click **Create Database**.
-4.  Enter `query-demo` and click **Create**.
-
-  The `query-demo` database automatically opens.
-
-## Creating documents in the database
-
-The [documents](../api/document.html#documents)
-that you create in this exercise contain the data that you use to query the `query-demo` database in later exercises.
-
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
-
-1.  Copy the sample text to a data file named `bulkcreate.dat` to create five documents:
-  ```json
-  {
-    "docs":
-    [
-      {
-        "_id": "doc1",
-        "firstname": "Sally",
-        "lastname": "Brown",
-        "age": 16,
-        "location": "New York City, NY"
-      },
-      {
-        "_id": "doc2",
-        "firstname": "John",
-        "lastname": "Brown",
-        "age": 21,
-        "location": "New York City, NY"
-      },
-      {
-        "_id": "doc3",
-        "firstname": "Greg",
-        "lastname": "Greene",
-        "age": 35,
-        "location": "San Diego, CA"
-      },
-      {
-        "_id": "doc4",
-        "firstname": "Anna",
-        "lastname": "Greene",
-        "age": 44,
-        "location": "Baton Rouge, LA"
-      },
-      {
-        "_id": "doc5",
-        "firstname": "Lois",
-        "lastname": "Brown",
-        "age": 33,
-        "location": "Syracuse, NY"
-      }
-    ]
-  }
-  ```
-  {:codeblock}
-
-2.  Run this command to create the documents:
-  ```sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo/_bulk_docs -X POST -H "Content-Type: application/json" -d \@bulkcreate.dat
-  ```
-  {:codeblock}
-
-  **Note:** Notice that the '`@`' symbol, used to indicate that the data
-  is included in a file, is identified by the supplied name.
-3.  Review the results:
-  ```json
-  [
-    {
-      "ok":true,
-      "id":"doc1",
-      "rev":"1-57a08e644ca8c1bb8d8931240427162e"
-    },
-    {
-      "ok":true,
-      "id":"doc2",
-      "rev":"1-bf51eef712165a9999a52a97e2209ac0"
-    },
-    {
-      "ok":true,
-      "id":"doc3",
-      "rev":"1-9c9f9b893fcdd1cbe09420bc4e62cc71"
-    },
-    {
-      "ok":true,
-      "id":"doc4",
-      "rev":"1-6aa4873443ddce569b27ab35d7bf78a2"
-    },
-    {
-      "ok":true,
-      "id":"doc5",
-      "rev":"1-d881d863052cd9681650773206c0d65a"
-    }
-  ]
-  ```
-  {:codeblock}
-
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
-
-1.  Click **`+`** and select **New Doc**. The 'New Document' window opens.
-2.  To create a document, copy the following sample text and replace the existing text in the new document.
-
-  _First sample document_:
-  ```json
-  {
-    "firstname": "Sally",
-    "lastname": "Brown",
-    "age": 16,
-    "location": "New York City, NY",
-    "_id": "doc1"
-  }
-  ```
-  {:codeblock}
-
-3.  Repeat step 2 to add the remaining documents to the database.
-
-  _Second sample document_:
-  ```json
-  {
-    "firstname": "John",
-    "lastname": "Brown",
-    "age": 21,
-    "location": "New York City, NY",
-    "_id": "doc2"
-  }
-  ```
-  {:codeblock}
-
-  _Third sample document_:
-  ```json
-  {
-    "firstname": "Greg",
-    "lastname": "Greene",
-    "age": 35,
-    "location": "San Diego, CA",
-    "_id": "doc3"
-  }
-  ```
-  {:codeblock}
-
-  _Fourth sample document_:
-  ```json
-  {
-    "firstname": "Anna",
-    "lastname": "Greene",
-    "age": 44,
-    "location": "Baton Rouge, LA",
-    "_id": "doc4"
-  }
-  ```
-  {:codeblock}
-
-  _Fifth sample document_:
-  ```json
-  {
-    "firstname": "Lois",
-    "lastname": "Brown",
-    "age": 33,
-    "location": "New York City, NY",
-    "_id": "doc5"
-  }
-  ```
-  {:codeblock}
-
-  The `query-demo` database was created. You can see the documents in the right pane.
-
-  ![Sample documents 1](../images/docs1.png)
-
-  ![Sample documents 2](../images/docs2.png)
-
-  ![Sample documents 3](../images/docs3.png)
-
-  ![Sample documents 4](../images/docs4.png)
-
-  ![Sample documents 5](../images/docs5.png)      
+Now, we're ready to learn how to run queries against the database you created in step two of [Before you begin](#before-you-begin-qt).
 
 ## Creating an index
+{: #creating-an-index-to-query-the-database-qt}
+{: step}
 
-Cloudant provides views and indexes to query the database. A view runs a query that is saved to the database, and
-the result is called the result set. When you submit a query to the view, your query searches
-the result set. An index is a way to structure data that improves retrieval time.
+{{site.data.keyword.cloudant_short_notm}} Query uses Mongo-style query syntax to search for documents by using logical operators. {{site.data.keyword.cloudant_short_notm}} Query is a combination of a view and a search index.
 
-You can use the primary index that comes with Cloudant, or secondary indexes like views
-(MapReduce), search indexes, Cloudant Geospatial queries, or Cloudant Query as described
-in the following list:
+When you use {{site.data.keyword.cloudant_short_notm}} Query, the query planner looks at the selector (your query) to determine the correct index to choose from. In memory, you filter out the documents by the selector, which is why, even without an index, you can still query with various fields.  
 
-*	Primary index – look up a document or list of documents by ID.  
-*	[View](../api/creating_views.html#views-mapreduce-) – search for information in the database that matches the search criteria that you specify, such as counts, sums, averages, and other mathematical functions. The criteria you can search is specified in the view's definition. Views use the MapReduce paradigm.
-*	[Search index](../api/search.html#search) – search one or more fields, large amounts of text, or use wildcards, fuzzy search, or facets with [Lucene Query Parser Syntax ![External link icon](../images/launch-glyph.svg "External link icon")](http://lucene.apache.org/core/4_3_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html#Overview){:new_window}.
-*	[Cloudant Geospatial](../api/cloudant-geo.html#cloudant-geospatial) – search for documents based on a spatial relationship.
-*	[Cloudant Query](../api/cloudant_query.html#query) – use Mongo-style query syntax to search for documents by using logical operators. Cloudant Query is a combination of a view and a search index. We use Cloudant Query in this tutorial.
+If no available defined index matches the specified query, then {{site.data.keyword.cloudant_short_notm}} uses the `_all_docs` index, which looks up documents by ID. In the worst case scenario, it returns all the documents by ID (full table scan). Full table scans are expensive to process. It is recommended that you create an index. 
+{: tip}
 
-> **Note:** If there is no available defined index that matches the specified query, then Cloudant
-> uses the `_all_docs` index.
+To create an index, follow these steps:
 
+1.  Copy the following sample JSON data into a file named `query-demo-index.json`:
 
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
-
-1.  Copy the following sample JSON data into a file named `query-index.dat`.
-  ```json
-  {
-    "index": {
-      "fields": [
-        "lastname",
-        "location",
-        "age"
-      ]
-    },
-    "name": "query-index",
-    "type": "json"
-  }
-  ```
-  {:codeblock}
+    ```json
+      {
+      	"index": {
+      		"fields": [
+      			"descriptionField",
+      			"temperatureField"
+      		],
+      		"partial_filter_selector": {
+      			"descriptionField": {
+      				"$eq": "hot"
+      			},
+      			"temperatureField": {
+      				"$gt": 50
+      			}
+      		}
+      	},
+      	"ddoc": "query-demo-index",
+      	"type": "json"
+      }
+    ```
+    {: codeblock}
 
 2.  Run the following command to create an index:
-  ```sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo/_index -X POST -H "Content-Type: application/json" -d \@query-index.dat
-  ```
-  {:codeblock}
 
+    ```sh
+      acurl "https://$ACCOUNT.cloudant.com/databasedemo/_index" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d \@query-demo-index.json
+    ```
+    {: codeblock}
+	
 3.  Review the results:
-  ```json
-  {
-    "result":"created",
-    "id":"_design/752c7031f3eaee0f907d18e1424ad387459bfc1d",
-    "name":"query-index"
-  }
-  ```
-  {:codeblock}
+
+    ```json
+      {
+      	"result": "created",
+      	"id": "_design/query-demo-index",
+      	"name": "490441584f9eddb8d09ef234d636b5f3b18e4ce6"
+      }
+    ```
+    {: codeblock}
 
 
+You aren't required to create an index to run a query. However, if you don't, the following warning is included with your results as an indicator that creating an index reduces processing and makes your queries more effective. `"Warning": "No matching index found, create an index to optimize query time."`
 
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
+## Running a simple query
+{: #running-a-simple-query-qt}
+{: step}
 
-1.  Click **`+` > Query Indexes** on either the **All Documents** or **Design Documents** tab.
-2.  Paste the following sample JSON data into the **Index** field:
-  ```json
-  {
-    "index": {
-      "fields": [
-        "lastname",  
-        "location",
-        "age"
-      ]
-    },
-    "name": "query-index",
-    "type": "json"
-  }
-  ```
-  {:codeblock}
+This example demonstrates how {{site.data.keyword.cloudant_short_notm}} Query finds documents based on the `descriptionField` with the value `boiling`.   
 
-  The index was created. You can see it in the right pane.
+To run the query, follow these steps:
 
-  ![Query index](../images/query-index1.png)
-
-
-
-## Creating a query
-
-Queries allow you to extract your data from Cloudant. A well-written
-[query](../api/cloudant_query.html#query) can narrow your search and
-its results to include only the data you want.
-
-This exercise shows you how to write and run a simple query, query with two fields,
-and query with an [operator](../api/cloudant_query.html#cloudant_query.html#operators).
-You query with an operator by specifying at least one field and its corresponding value.
-The query then uses this value to search the database for matches.
-
-For anything but the most simple query, add the JSON to a data file and run it from the command line.
-
-### Running a simple query
-
-This example demonstrates how Cloudant Query uses the `query-index` to find the
-`lastname` and filters the results in memory to find the `firstaname`.   
-
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
-
-1.  Copy the following sample JSON into a data file named `query1.dat`.
-  ```json
-    {
+1.  Copy the following sample JSON into a data file named `query1.json`:
+    ```json
+     {
       "selector": {
-            "lastname" : "Greene",
-            "firstname" : "Anna"            
-         }        
-    }       
-  ```    
-  {:codeblock}
+        "descriptionField": "boiling"
+       }
+     }
+    ```
+    {: codeblock}
 
 2.  Run the following command to query the database:
-  ```sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo/_find -X POST -H "Content-Type: application/json" -d \@query1.dat
-  ```
-  {:codeblock}
+    ```sh
+      acurl "https://$ACCOUNT.cloudant.com/databasedemo/_find" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d \@query1.json
+    ```
+    {: codeblock}
+    {: curl}
 
 3.  Review the query results:
-  ```json
-  {
-    "docs": [
+    ```json
       {
-        "_id":"doc4",
-        "_rev":"3-751ab049e8b5dd1ba045cea010a33a72",
-            "firstname":"Anna",
-            "lastname":"Greene",
-            "age":44,
-            "location":"Baton Rouge, LA"
-      }
-    ]
-  }
-  ```
-  {:codeblock}
+      	"docs": [{
+      		"_id": "91d1fa833d28efe15069604f98de701d",
 
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
+      		"_rev": "1-f998fc7b89d4466c1e7bb204b1b00f74",
+    		"numberField": 1,
+      		"nameField": "one",
+      		"descriptionField": "boiling",
+      		"temperatureField": 100
+       	}],
+      	"bookmark":  "g1AAAABweJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorWBqmGKYlWhgbpxhZpKalGpoamFmaGZikWVqkpJobGKaA9HHA9BGlIwsAmn8eLw",
+      	"warning": "No matching index found, create an index to optimize query time."
+       }
+    ```
+    {: codeblock}}
 
-1.  Click the **Query** tab.
-2.  Copy and paste the following sample JSON into the Cloudant Query window:
-  ```json
-   {
-      "selector": {
-            "lastname" : "Greene",
-            "firstname" : "Anna"            
-         }        
-   }
-  ```
-  {:codeblock}
+Next, you find a document in the database by using two fields.  
 
-3.  Click **Run Query**.
+## Running a query with two fields
+{: #running-a-query-with-two-fields-qt}
+{: step}
 
-  The query results appear in the right pane.
+This example uses two fields to find a document with the values: `freezing` and `-5`. 
 
-  ![Query 1 results](../images/dashboard_query1_results.png)
-
-### Running a query with two fields
-
-This example uses two fields to find everyone that is named `Brown` who lives in `New York City, NY`.
-
-We describe the search by using a ['selector' expression](../api/cloudant_query.html#selector-syntax)
+The search is described by using a ['selector' expression](/docs/apis/cloudant/cloudant-gen1#postfind){: external}
 that looks like the following example:
+
 ```json
   {
-    "selector": {
-      "lastname": "Brown",
-      "location": "New York City, NY"
-    }
+  	"selector": {
+  		"descriptionField": "freezing",
+  		"temperatureField": -5
+  	}
   }
 ```
-{:codeblock}
+{: codeblock}
 
-We can tailor the results to meet our needs
-by adding more details within the selector expression.
-The `fields` parameter specifies the fields to include with the results. In our example, the
-results include the first name, last name, and location. The results are sorted by first
-name in ascending order based on the values in the `sort` parameter.
-The extra details look like the following example:
+You can tailor the results by adding more details within the selector expression.
+The `fields` parameter specifies the fields to include with the results. In our example, the results include the `nameField`, `descriptionField`, and `temperatureField`, as shown in the following example.
+
 ```json
-{
-  ...
-  "fields" : [
-    "lastname",
-    "firstname",
-    "location"
-  ],
-  "sort" : [
-    {
-      "lastname": "asc"
-    },
-    {
-      "firstname": "asc"
-    }
-  ]
-}
-```  
-{:codeblock}
-
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
-
-1.  Copy the sample JSON into a data file named `query2.dat`.
-  ```json
   {
-    "selector": {
-      "lastname": "Brown",
-      "location": "New York City, NY"
-    },
-    "fields": [
-      "firstname",
-      "lastname",
-      "location"
-    ],
-    "sort": [
-      {
-        "lastname": "asc"
-      },
-      {
-        "firstname": "asc"
-      }
-    ]
+  	...
+  	"fields": [
+  		"nameField",
+  		"descriptionField",
+  		"temperatureField"
+  	]
   }
-  ```
-  {:codeblock}
+```  
+{: codeblock}
+
+To run the query, follow these steps:
+
+1.  Copy the sample JSON into a data file named `query2.json`.
+    ```json
+      {
+      	"selector": {
+      		"descriptionField": "freezing",
+      		"temperatureField": -5
+      	},
+      	"fields": [
+      		"nameField",
+      		"descriptionField",
+      		"temperatureField"
+      	]
+      }
+    ```
+    {: codeblock}
 
 2.  Run the following command to query the database:
-  ```sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo/_find -X POST -H "Content-Type: application/json" -d \@query2.dat
-  ```
-  {:codeblock}
+    ```sh
+      acurl "https://$ACCOUNT.cloudant.com/databasedemo/_find" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d \@query2.json
+    ```
+    {: codeblock}
+    {: curl}
 
 3.  Review the query results:
-  ```json
-  {
-    "docs": [
-      {
-        "firstname": "John",
-        "lastname": "Brown",
-        "location": "New York City, NY"
-      },
-      {
-        "firstname": "Sally",
-        "lastname": "Brown",
-        "location": "New York City, NY"
-      }
-    ]
-  }
-  ```
-  {:codeblock}
-
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
-
-1.  Click the **Query** tab.
-2.  Copy and paste the following sample JSON into the Cloudant Query window:
-  ```json
-  {
-    "selector": {
-      "lastname": "Brown",
-      "location": "New York City, NY"
-    },
-    "fields": [
-      "firstname",
-      "lastname",
-      "location"
-    ],
-    "sort": [
-      {
-        "lastname": "asc"
-      },
-      {
-        "firstname": "asc"
-      }
-    ]  
-  }
-  ```
-  {:codeblock}
-
-3.  Click **Run Query**.
-
-  The query results appear in the right pane.
-
-  ![Query 2 results](../images/dashboard_query2_results.png)
-
-### Running a query with operators
-
-In this example, the `$eq` (equal) and `$gt` (greater than) operators are used to search
-for documents that contain the last name `Greene` and an age that is greater than `30`.
-
-We use a selector expression like the following example:
-```json
-{
-  "selector": {
-    "lastname": {
-      "$eq": "Greene"
-    },
-    "age": {
-      "$gt": 30
+    ```json
+    {
+    	"docs": [{
+    		"nameField": "eight",
+    		"descriptionField": "freezing",
+    		"temperatureField": -5
+    	}],
+    	"bookmark": "g1AAAABweJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorpBiYGJolWaSZmaWYpFqmGBiYmKclphhappqZmRglG5uD9HHA9BGlIwsAms8eJw",
+    	"warning": "No matching index found, create an index to optimize query time."
     }
-  }
-}
-```   
-{:codeblock}
+    ```
+    {: codeblock}
 
-![Command Line icon](../images/CommandLineIcon.png) _Command line_
+Next, you find a document in the database by using multiple operators. 
 
-1.  Copy the following sample JSON to a file named `query3.dat`.
-  ```json
+## Running a query with operators
+{: #running-a-query-with-operators}
+{: step}
+
+In this example, the `$gt` (greater than) and `$eq` (equal) operators are used to search
+for documents that include a temperature that is greater than `20` degrees and a description that contains the value `hot`. The results include the `descriptionField` and `temperatureField`, shown in descending order by temperature. 
+
+You use a selector expression like the following example:
+
+```json
   {
-    "selector": {
-      "lastname": {
-        "$eq": "Greene"
-      },
-      "age": {
-        "$gt": 30
-      }
-    },
-    "fields" : [
-      "firstname",
-      "lastname",
-      "age"
-    ],
-    "sort": [
-      {
-        "lastname": "asc"
-      },
-      {
-        "firstname": "asc"
-      }
-    ]  
+  	"selector": {
+  		"temperatureField": {
+  			"$gt": 50
+  		},
+  		"descriptionField": {
+  			"$eq": "hot"
+  		}
+  	},
+  	"fields": [
+  		"descriptionField",
+  		"temperatureField"
+  	],
+  	"sort": [{
+  		"temperatureField": "desc"
+  	}],
+  	"use_index": "_design/query-demo-index"
   }
-  ```
-  {:codeblock}
+```
+{: codeblock}
+
+To run the query, follow these steps:
+
+1.  Copy the following sample JSON to a file named `query3.json`.
+    ```json
+      {
+      	"selector": {
+      		"descriptionField": {
+      			"$eq": "hot"
+      		},
+      		"temperatureField": {
+      			"$gt": 50
+      		}
+      	},
+      	"fields": [
+      		"descriptionField",
+      		"temperatureField"
+      	],
+      	"sort": [{
+      		"temperatureField": "desc"
+      	}],
+      	"use_index": "_design/query-demo-index"
+      }
+    ```
+    {: codeblock}
 
 2. Run this query:
-  ```sh
-  acurl https://$ACCOUNT.cloudant.com/query-demo/_find -X POST -H "Content-Type: application/json" -d \@query3.dat
-  ```
-  {:codeblock}
+    ```sh
+      acurl "https://$ACCOUNT.cloudant.com/databasedemo/_find" \
+        -X POST \
+        -H "Content-Type: application/json" \
+        -d \@query3.json
+    ```
+    {: codeblock}
+    {: curl}
 
 3.  Review the query results:
-  ```json
-  {
-    "docs": [
-      {
-        "firstname": "Anna",
-        "lastname": "Greene",
-        "age": 44
-      },
-      {
-        "firstname": "Greg",
-        "lastname": "Greene",
-        "age": 35
-      }
-    ]
-  }
-  ```
-  {:codeblock}
+    ```json
+    {
+    	"docs": [{
+    			"descriptionField": "hot",
+    			"temperatureField": 97
+    		},
+    		{
+    			"descriptionField": "hot",
+    			"temperatureField": 75
+    		}
+    	],
+    	"bookmark": "g1AAAABbeJzLYWBgYMpgSmHgKy5JLCrJTq2MT8lPzkzJBYorJBoYmKWaWVokpZkamJtaGJskm5slmSenGhulWpibJhqC9HHA9OWATErUAGlkzsgvycoCAEsUF_A"
+    }
+    ```
+    {: codeblock}
 
-![Dashboard icon](../images/DashboardIcon.png) _Cloudant Dashboard_
-
-1.  Click the **Query** tab.
-2.  Copy and paste the following sample JSON into the Cloudant Query window:
-  ```json
-  {
-    "selector": {
-      "lastname": {
-        "$eq": "Greene"
-      },
-      "age": {
-        "$gt": 30
-      }
-    },
-    "fields" : [
-      "firstname",
-      "lastname",
-      "age"
-    ],
-    "sort": [
-      {
-        "lastname": "asc"
-      },
-      {
-        "firstname": "asc"
-      }
-    ]   
-  }
-  ```
-  {:codeblock}
-
-3.  Click **Run Query**.
-
-  The query results appear in the right pane.
-
-  ![Query 3 results](../images/dashboard_query3_results.png)
-
-For more information about Cloudant, see the [Cloudant Documentation](../cloudant.html#overview).
+Now you know how to extract data from your database by using {{site.data.keyword.cloudant_short_notm}} Query. For more information, see the [{{site.data.keyword.cloudant_short_notm}} documentation](/docs/Cloudant?topic=Cloudant-ibm-cloud-public).
